@@ -1,0 +1,13 @@
+torch==2.5.1+cu121
+transformers==4.48.0
+datasets==3.4.1
+accelerate==1.6.0
+peft==0.15.0
+trl==0.16.1
+numpy==2.2.5
+pandas==2.2.3
+rich==13.9.4
+tqdm>=4.65.0
+fire==0.7.0
+requests==2.32.3
+vllm==0.7.3
