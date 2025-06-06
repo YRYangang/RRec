@@ -30,7 +30,6 @@ from tqdm import tqdm
 
 
 from prompters.rrec_prompter import UserGenPrompter, ItemPrompter, UserPrompter
-from prompters.indexed_dataset import IndexedDataset
 from trainers.utils import Similarity
 
 logger = logging.get_logger(__name__)
@@ -217,8 +216,11 @@ class GenRecTrainer(Trainer):
         full_dataset['item_info'] = item_prompter.convert_dataset(
             dset=full_dataset['item_info'])
 
-        train_dataset = IndexedDataset(
-            full_dataset['train'], prompter=user_prompter)
+
+        # add a idx column to the train dataset
+        full_dataset['train'] = full_dataset['train'].add_column("train_data_id", 
+                                                                 range(len(full_dataset['train'])))
+        train_dataset = full_dataset['train']
 
         self.item_dataset = full_dataset['item_info']
         if getattr(args, "gradient_checkpointing", False):
@@ -727,7 +729,7 @@ class GenRecTrainer(Trainer):
         augmented_input = []
         for i in range(full_batch_size):
             augmented_input.append(
-                self.train_dataset.get_with_profiles(
+                self._augment_with_reasoning(
                     train_data_ids[i],
                     user_results[i],
                 )
@@ -751,6 +753,12 @@ class GenRecTrainer(Trainer):
                 rich.print(examples)
 
         return augmented_input
+
+    def _augment_with_reasoning(self, train_data_id, reasoning):
+        element = self.train_dataset[train_data_id] | {
+            "reasoning": reasoning}
+        element = self.user_prompter.to_chat_example(element)
+        return self.user_prompter.totensor_multiple(element)     
 
     def _efficient_forward(self,
                            model: nn.Module,
