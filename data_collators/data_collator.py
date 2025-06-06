@@ -80,7 +80,7 @@ class RRecDataCollator(DataCollatorForLanguageModeling):
 
     def handle_nested_inputs(self, examples, prefix='multi_user'):
         """
-        handle dpo_input_ids, dpo_attention_mask, dpo_completion_range
+        handle multi_user_input_ids
         """
         self.tokenizer.padding_side = "right"
         examples_to_encode = []
@@ -99,7 +99,7 @@ class RRecDataCollator(DataCollatorForLanguageModeling):
 
         inputs = super().torch_call(examples_to_encode)
         labels = torch.full_like(inputs["input_ids"], -100)
-        # dpo_attention_mask = inputs["attention_mask"].clone()
+        
         if len(completion_ranges):
             for i, _range in enumerate(completion_ranges):
                 if _range is not None:
@@ -110,7 +110,6 @@ class RRecDataCollator(DataCollatorForLanguageModeling):
             f"{prefix}_input_ids": inputs["input_ids"],
             f"{prefix}_attention_mask": inputs["attention_mask"],
             f"{prefix}_labels": labels,
-            # f"{prefix}_stage1_attention_mask": dpo_attention_mask  # this mask out the 2-stage prompt
         }
 
         return result

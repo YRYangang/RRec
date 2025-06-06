@@ -122,9 +122,6 @@ class RecPOTrainer(GenRecTrainer):
 
         sim_softmax = shaped_sim.softmax(dim=-1)
 
-        # calculate item entropy
-        sim_entropy = - \
-            (sim_softmax * torch.log(sim_softmax + 1e-10)).sum(dim=-1)
         sim_softmax = sim_softmax.gather(2, seq_labels)  # (B, num_samples, 1)
         sim_softmax = sim_softmax.squeeze(2)  # (B, num_samples)
 
@@ -138,11 +135,8 @@ class RecPOTrainer(GenRecTrainer):
                 _mean = rewards.mean(dim=1, keepdim=True)
                 _std = rewards.std(dim=1, keepdim=True) + 1e-8
                 advantages = (rewards - _mean) / _std  # (B, num_samples)
-                # advantages = rewards > _mean
-                # advantages = advantages.float()
         elif self.args.advantage_type == 'leave-one-out':
             _mean = rewards.mean(dim=1, keepdim=True)
-            # advantages = rewards - (_mean - rewards/num_samples)
             advantages = rewards * (1 + 1 / num_samples) - _mean
         else:
             raise NotImplementedError
@@ -154,11 +148,6 @@ class RecPOTrainer(GenRecTrainer):
         _, topk_indices = advantages.topk(topk, dim=-1)
         relabel_mask = torch.zeros_like(advantages, dtype=torch.bool)
         relabel_mask.scatter_(-1, topk_indices, True)
-
-        # relabel_mask = advantages > 0
-
-        # rich.print(f"[yellow]advantage_type: {advantages}[/yellow]")
-        # rich.print(f"[blue]max_mask: {max_mask}[/blue]")
 
         in_batch_labels = torch.arange(batch_size).repeat_interleave(
             num_samples).to(seq_input_ids.device)
@@ -176,8 +165,6 @@ class RecPOTrainer(GenRecTrainer):
             {
                 "softmax": sim_softmax.mean().item(),
                 "softmax_std": sim_softmax.std(dim=1).mean().item(),
-
-                "sim_entropy": sim_entropy.mean().item(),
 
                 f"ndcg@{cutoff}": ndcg.mean().item(),
                 f"ndcg@{cutoff}_std": ndcg.std(dim=1).mean().item(),
@@ -487,6 +474,10 @@ class RecPOTrainer(GenRecTrainer):
     def compute_loss(self, model, inputs,
                      return_outputs=False,
                      **loss_kwargs):
+        """
+        This is the method that will only be called in eval mode (since we manually overwrite `training_step` method)
+        We will compute the similarity between user and item, and the RL reward, advantage.
+        """
         assert not model.training
         similarity, _ = self.compute_sim_val(model, inputs)
         loss = torch.tensor(0.0).to(similarity.device)

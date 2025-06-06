@@ -17,7 +17,7 @@ from trainers.RecPOTrainer import (
 def train(
         output_dir="../checkpoints",
 
-        run_name: str = "dpo-6epoch-debug-v2",
+        run_name: str = "debug-v2",
 
         train_batch_size: int = 4,
         eval_batch_size: int = 32,
@@ -175,7 +175,7 @@ def train(
 
         bf16_full_eval=True,
         per_device_eval_batch_size=eval_batch_size,
-        metric_for_best_model='ndcg@20',
+        metric_for_best_model='eval_valid_ndcg@10',
         eval_on_start=eval_on_start,
         batch_eval_metrics=True,
 
