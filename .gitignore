@@ -7,3 +7,5 @@ __pycache__/
 data/
 
 scripts/
+
+*.ipynb
