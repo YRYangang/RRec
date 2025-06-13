@@ -229,7 +229,7 @@ def _download_raw(path: str, type: str = 'review', category: str = "Movies_and_T
     Returns:
         str: The local file path where the downloaded file is saved.
     """
-    url = "https://datarepo.eng.ucsd.edu/mcauley_group/data/amazon_2023/"
+    url = "https://mcauleylab.ucsd.edu/public_datasets/data/amazon_2023/"
     if type == 'review':
         url += f"benchmark/5core/rating_only/{category}.csv.gz"
     elif type == 'meta':
