@@ -74,7 +74,8 @@ def save_data(current_reviews, metadata,
               ):
     new_reviews = current_reviews.to_dict(orient='records')
     items = current_reviews['parent_asin'].unique().tolist()
-    asin2title = {item['parent_asin']: item['title'] for item in metadata if item['parent_asin'] in items}
+    asin2title = {item['parent_asin']: item['title'] for item in tqdm(
+        metadata, desc="Creating asin2title mapping") if item['parent_asin'] in items}
     new_items = set()
     if index_item_with_pad:
         asin2title['pad_asin'] = 'pad_title'
@@ -94,16 +95,11 @@ def save_data(current_reviews, metadata,
                 'items': [],
                 'ratings': [],
                 'timestamps': [],
-                'review_titles': [],
-                'review_texts': []
             }
         new_items.add(item)
         interact[user]['items'].append(item)
         interact[user]['ratings'].append(review['rating'])
         interact[user]['timestamps'].append(review['timestamp'])
-
-        interact[user]['review_titles'].append(review['review_title'])
-        interact[user]['review_texts'].append(review['review_text'])
 
     interaction_list = []
     for key in interact.keys():
@@ -111,23 +107,16 @@ def save_data(current_reviews, metadata,
         ratings = interact[key]['ratings']
         timestamps = interact[key]['timestamps']
 
-        review_titles = interact[key]['review_titles']
-        review_texts = interact[key]['review_texts']
-
-        all = list(zip(items, ratings, timestamps, review_titles, review_texts))
+        all = list(zip(items, ratings, timestamps))
         res = sorted(all, key=lambda x: int(x[2]))
-        items, ratings, timestamps, review_titles, review_texts = zip(*res)
+        items, ratings, timestamps = zip(*res)
         items, ratings, timestamps = list(items), list(ratings), list(timestamps)
-        review_titles, review_texts = list(review_titles), list(review_texts)
 
         interact[key]['items'] = items
         interact[key]['ratings'] = ratings
         interact[key]['timestamps'] = timestamps
         interact[key]['item_ids'] = [asin2id[item] for item in items]
         interact[key]['title'] = [asin2title[item] for item in items]
-
-        interact[key]['review_titles'] = review_titles
-        interact[key]['review_texts'] = review_texts
 
         for i in range(1, len(items)):
             st = max(i - window_size, 0)
@@ -138,10 +127,6 @@ def save_data(current_reviews, metadata,
                  interact[key]['item_ids'][st:i], interact[key]['item_ids'][i],
                  interact[key]['title'][st:i], interact[key]['title'][i],
                  interact[key]['ratings'][st:i], interact[key]['ratings'][i],
-
-                 interact[key]['review_titles'][st:i], interact[key]['review_titles'][i],
-                 interact[key]['review_texts'][st:i], interact[key]['review_texts'][i],
-
                  interact[key]['timestamps'][st:i], interact[key]['timestamps'][i],
 
                  ])
@@ -156,10 +141,6 @@ def save_data(current_reviews, metadata,
                     'history_item_id', 'item_id',
                     'history_item_title', 'item_title',
                     'history_rating', 'rating',
-
-                    'history_review_title', 'review_title',
-                    'history_review_text', 'review_text',
-
                     'history_timestamp', 'timestamp',
                     ]
 
@@ -408,31 +389,6 @@ def main(category: str = "CDs_and_Vinyl", K: int = 0,
                              K=K,
                              start_time=f"{st_year}-{st_month}-01",
                              end_time=f"{ed_year}-{ed_month}-01")
-
-    # we want to find the same record (same user, item, timestamp) in the full_df and put the 'title' and 'text' column into the df
-    full_df = _parse_gz_fast(review_path, data_root_dir)
-    full_df = full_df[full_df['parent_asin'].isin(new_reviews['parent_asin'].unique())]
-    full_df = full_df[full_df['user_id'].isin(new_reviews['user_id'].unique())]
-    full_df['time'] = pd.to_datetime(full_df['timestamp'], unit='ms')
-    full_df.rename(columns={'title': 'review_title', 'text': 'review_text'}, inplace=True)
-
-    print('Merging the review text')
-    merged_df = new_reviews.merge(full_df[['user_id', 'parent_asin', 'time', 'review_title', 'review_text']],
-                                  on=['user_id', 'parent_asin', 'time'],
-                                  how='left',
-                                  )
-
-    # Check for missing values and log warnings if necessary
-    missing_mask = merged_df['review_title'].isna() | merged_df['review_text'].isna()
-    if missing_mask.any():
-        missing_rows = merged_df[missing_mask]
-        for _, row in missing_rows.iterrows():
-            print(
-                f"Can't find the same record in full_df for {row['user_id']}, {row['parent_asin']}, {row['time']}")
-
-    # Update df with the merged 'title' and 'text' columns
-    new_reviews['review_title'] = merged_df['review_title']
-    new_reviews['review_text'] = merged_df['review_text']
 
     file_name = f"{category}_{K}_{st_year}-{st_month}-{ed_year}-{ed_month}"
     if postfix:
