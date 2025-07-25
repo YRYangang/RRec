@@ -17,7 +17,7 @@ DATASET_DIR='data/'$DATASET_CAT'_0_2022-10-2023-10'
 
 accelerate launch --num_processes=$NUM_PROCESSES --config_file=accelerates/deepspeed_config.yaml \
                 --main_process_port=$MAIN_PROCESS_PORT train.py \
-                --model=$MODEL \
+                --model=gemma \
                 --dataset_dir=$DATASET_DIR \
                 --dataset_category=$DATASET_CAT \
                 --train_batch_size=4 \

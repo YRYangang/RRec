@@ -39,8 +39,8 @@ def train(
 
         cleanup_previous_checkpoints=False,
         
-        dataset_category: str = "",
-        dataset_dir="",
+        dataset_category: str = "CDs_and_Vinyl",
+        dataset_dir="data/CDs_and_Vinyl_0_2022-10-2023-10",
         
         use_lora=True,
         seed=42,
