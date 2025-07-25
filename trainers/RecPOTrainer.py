@@ -164,18 +164,8 @@ class RecPOTrainer(GenRecTrainer):
         self.store_metrics(
             {
                 "softmax": sim_softmax.mean().item(),
-                "softmax_std": sim_softmax.std(dim=1).mean().item(),
-
                 f"ndcg@{cutoff}": ndcg.mean().item(),
-                f"ndcg@{cutoff}_std": ndcg.std(dim=1).mean().item(),
-
                 "reward": rewards.mean().item(),
-                "reward_std": rewards.std(dim=1).mean().item(),
-                "reward_max": rewards.max().item(),
-                "reward_min": rewards.min().item(),
-
-                "advantage_min": advantages.min().item(),
-                "advantage_max": advantages.max().item(),
                 "advantage": advantages.mean().item(),
 
             },
@@ -209,6 +199,7 @@ class RecPOTrainer(GenRecTrainer):
     def training_step(self,
                       model: nn.Module,
                       inputs: Dict[str, Union[torch.Tensor, Any]],
+                      *args,
                       **kwargs) -> torch.Tensor:
         """
         Perform a training step on a batch of inputs.

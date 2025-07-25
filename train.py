@@ -31,7 +31,6 @@ def train(
         eval_freq=8,
         early_stopping_patience=8,
         eval_on_start: bool = True,
-        logging_dir="./logs",
         gradient_accumulation_steps: int = 1,
 
         num_train_epochs: int = 10,
@@ -51,7 +50,7 @@ def train(
         window_size: int = 20,
         gather_negs_across_processes=True,
         max_new_tokens=300,
-        group_size=2,
+        group_size=4,
         lr_scheduler_type='constant',
         use_vllm=True,
         **kwargs,
@@ -186,7 +185,6 @@ def train(
         warmup_steps=warmup_steps,
         report_to='none',
         run_name=run_name,
-        logging_dir=logging_dir,
         gradient_checkpointing_kwargs={'use_reentrant': False},
 
         ddp_find_unused_parameters=False,

@@ -559,35 +559,35 @@ class GenRecTrainer(Trainer):
                  ignore_keys: Optional[List[str]] = None,
                  metric_key_prefix: str = "eval",
                  ) -> Dict[str, float]:
-        eval_model = self.get_model_for_eval()
-        self._generate_item_embeddings(eval_model)
+        if eval_dataset is None:
+            eval_model = self.get_model_for_eval()
+            self._generate_item_embeddings(eval_model)
+            os.makedirs(os.path.join(
+                self.args.output_dir, 'datasets'), exist_ok=True)
 
-        assert eval_dataset is None
-        os.makedirs(os.path.join(
-            self.args.output_dir, 'datasets'), exist_ok=True)
+            with torch.no_grad():
+                for _set_name in self.eval_dataset.keys():
+                    dset_cache_dir = os.path.join(
+                        self.args.output_dir, 'datasets', f'reasoning_{_set_name}_{self.state.global_step}')
 
-        with torch.no_grad():
-            for _set_name in self.eval_dataset.keys():
-                dset_cache_dir = os.path.join(
-                    self.args.output_dir, 'datasets', f'reasoning_{_set_name}_{self.state.global_step}')
+                    self.eval_dataset[_set_name] = self._update_eval_set(
+                        eval_model, self.eval_dataset[_set_name], prefix="user")
 
-                self.eval_dataset[_set_name] = self._update_eval_set(
-                    eval_model, self.eval_dataset[_set_name], prefix="user")
+                    self.eval_dataset[_set_name].save_to_disk(dset_cache_dir)
+                    self.accelerator.print(
+                        f"{_set_name} dataset saved to {dset_cache_dir}")
 
-                self.eval_dataset[_set_name].save_to_disk(dset_cache_dir)
-                self.accelerator.print(
-                    f"{_set_name} dataset saved to {dset_cache_dir}")
+                    self.eval_dataset[_set_name] = self.user_prompter.convert_dataset(
+                        dset=self.eval_dataset[_set_name])
 
-                self.eval_dataset[_set_name] = self.user_prompter.convert_dataset(
-                    dset=self.eval_dataset[_set_name])
-
-            # calculate profile avg length
-                _len = [len(x['user_input_ids']) for x in self.eval_dataset]
-                self.store_metrics({'output_length': sum(_len) / len(_len)},
-                                   metric_key_prefix=f"{metric_key_prefix}_{_set_name}")
+                # calculate profile avg length
+                
+                    _len = [len(x['user_input_ids']) for x in self.eval_dataset[_set_name]]
+                    self.store_metrics({'output_length': sum(_len) / len(_len)},
+                                    metric_key_prefix=f"{metric_key_prefix}_{_set_name}")
 
         eval_output = super().evaluate(
-            eval_dataset=None,
+            eval_dataset=eval_dataset,
             ignore_keys=ignore_keys,
             metric_key_prefix=metric_key_prefix,
         )
@@ -728,12 +728,12 @@ class GenRecTrainer(Trainer):
 
         augmented_input = []
         for i in range(full_batch_size):
-            augmented_input.append(
-                self._augment_with_reasoning(
-                    train_data_ids[i],
-                    user_results[i],
-                )
-            )
+            element = self.train_dataset[train_data_ids[i]] | {
+                "profile": user_results[i]}
+            element = self.user_prompter.to_chat_example(element)
+            element = self.user_prompter.totensor_multiple(element)
+            augmented_input.append(element)
+
 
         augmented_input = self.data_collator(augmented_input)
 
@@ -754,11 +754,7 @@ class GenRecTrainer(Trainer):
 
         return augmented_input
 
-    def _augment_with_reasoning(self, train_data_id, reasoning):
-        element = self.train_dataset[train_data_id] | {
-            "reasoning": reasoning}
-        element = self.user_prompter.to_chat_example(element)
-        return self.user_prompter.totensor_multiple(element)     
+    
 
     def _efficient_forward(self,
                            model: nn.Module,
@@ -866,7 +862,9 @@ class GenRecTrainer(Trainer):
                 The values to log.
         """
         # logs either has 'loss' or 'eval_loss'
-        for metric_key_prefix in self._stored_metrics:
+        # Create a list of keys to avoid modifying dict during iteration
+        metric_key_prefixes = list(self._stored_metrics.keys())
+        for metric_key_prefix in metric_key_prefixes:
             # Add averaged stored metrics to logs
             all_store_metrics = self.accelerator.gather_for_metrics(
                 [self._stored_metrics[metric_key_prefix]], use_gather_object=True)
