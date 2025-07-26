@@ -3,6 +3,7 @@ import html
 import json
 import os
 import re
+import warnings
 from typing import Literal
 
 import fire
@@ -13,6 +14,7 @@ from tqdm import tqdm
 
 JUMP_OFFSET = pd.DateOffset(months=3)
 MAX_LEN = 20
+
 
 def gao(metadata, reviews: pd.DataFrame, K, start_time, end_time):
     print(f"from {start_time} to {end_time}")
@@ -213,24 +215,33 @@ def item_info_to_df(metadata, new_items, asin2id, add_pad_item=True):
 
     """
     metadata_df = pd.DataFrame(metadata)
-    metadata_df.drop(["videos", "author", "bought_together", "images"], axis=1, inplace=True)
+    columns_to_drop = ["videos", "author", "bought_together", "images", "asin"]
+    columns_to_drop = [c for c in columns_to_drop if c in metadata_df.columns]
+    metadata_df.drop(columns_to_drop, axis=1, inplace=True)
     # filter the items according to the new_items_asins
     metadata_df = metadata_df[metadata_df["parent_asin"].isin(new_items)]
     metadata_df.loc[:, "item_id"] = metadata_df["parent_asin"].map(asin2id)
 
     metadata_df = metadata_df.astype({"rating_number": "int"})
-    metadata_df["details"] = metadata_df["details"].apply(json.dumps)
-
-    metadata_df.loc[:, "subtitle"] = metadata_df["subtitle"].apply(
-        lambda x: "" if x is None or str(x).lower() == "nan" or str(x).lower() == "none" else str(x)
-    )
-
-    metadata_df.loc[:, "description"] = metadata_df["description"].apply(
-        lambda x: list(set(x)) if isinstance(x, list) else [x] if isinstance(x, str) else []
-    )
-
-    metadata_df["features"] = metadata_df["features"].apply(lambda x: x if isinstance(x, list) else [])
-
+    if "details" in metadata_df.columns:
+        metadata_df["details"] = metadata_df["details"].apply(json.dumps)
+    else:
+        warnings.warn("details column not found in metadata")
+    if "subtitle" in metadata_df.columns:
+        metadata_df.loc[:, "subtitle"] = metadata_df["subtitle"].apply(
+            lambda x: "" if x is None or str(x).lower() == "nan" or str(x).lower() == "none" else str(x)
+        )
+    if "description" in metadata_df.columns:
+        metadata_df.loc[:, "description"] = metadata_df["description"].apply(
+            lambda x: list(set(x)) if isinstance(x, list) else [x] if isinstance(x, str) else []
+        )
+    else:
+        warnings.warn("description column not found in metadata")
+    if "features" in metadata_df.columns:
+        metadata_df["features"] = metadata_df["features"].apply(lambda x: x if isinstance(x, list) else [])
+    else:
+        warnings.warn("features column not found in metadata")
+    metadata_df = metadata_df.reset_index(drop=True)
     # add one row of pad item
     if add_pad_item:
         metadata_df.loc[len(metadata_df)] = {
@@ -355,7 +366,6 @@ def _parse_gz_fast(path: str, data_root_dir: str):
 def load_items(path: str):
     items = []
     items_ids = []
-    
     num_no_title = 0
     num_invalid_title = 0
     num_too_long_title = 0
@@ -411,7 +421,7 @@ def clean_text(raw_text: str) -> str:
 
 
 def main(
-    category: str = "CDs_and_Vinyl",
+    category: str = "Electronics",
     K: int = 0,
     st_year: int = 2022,
     st_month: int = 10,
