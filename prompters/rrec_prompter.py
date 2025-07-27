@@ -9,8 +9,6 @@ from prompters.prompts import obtain_prompts
 DESCRIPTION_MAX_LEN = 100
 
 
-
-
 def get_item_info_str(sequence, item_dset, just_title=False):
     if just_title:
         item_info_str = sequence['item_title'] if "item_title" in sequence else sequence['title']
@@ -19,8 +17,8 @@ def get_item_info_str(sequence, item_dset, just_title=False):
         item_title = sequence['title']
         item_info = sequence
     else:  # this is trn/test/val split
-        item_id = sequence['seq_labels']
-        item_title = sequence['item_title']
+        item_id = sequence["seq_labels"]
+        item_title = sequence["item_title"]
         item_info = item_dset[item_id - 1]
         item_title_2 = item_info['title']
         assert item_title == item_title_2, f"item_title: {item_title}, item_title_2: {item_title_2}"
@@ -269,12 +267,14 @@ class UserPrompter(AbstractPrompter):
         self.prompts = obtain_prompts(category)
         self.prompts['user_prompt'] = self.prompts['user_prompt'].format(
             emb_token=self.emb_token,
-            emb_end_token=self.emb_end_token,)
+            emb_end_token=self.emb_end_token,
+        )
 
-    def convert_dataset(self,
-                        split: Optional[str] = None,
-                        dset: datasets.Dataset = None,
-                        ):
+    def convert_dataset(
+        self,
+        split: Optional[str] = None,
+        dset: datasets.Dataset = None,
+    ):
         new_dataset = self.dset[split] if split is not None else dset
 
         assert split is None or split != 'item_info'
@@ -305,14 +305,10 @@ class UserPrompter(AbstractPrompter):
 
         return new_dataset
 
-
     def to_chat_example(self, sequence):
-        history_items = get_items_str(sequence,
-                                      self.dset['item_info'],
-                                      self.window_size,
-                                      just_title=True)
-        prompt = self.prompts['user_prompt']
-        sequence['prompt'] = prompt + '\n' + history_items
+        history_items = get_items_str(sequence, self.dset["item_info"], self.window_size, just_title=True)
+        prompt = self.prompts["user_prompt"]
+        sequence["prompt"] = prompt + "\n" + history_items
 
         if isinstance(sequence['profile'], str):
             sequence['profile'] = [sequence['profile']]
@@ -348,3 +344,35 @@ class UserPrompter(AbstractPrompter):
 
         return result
 
+    def find_final_start_end(self, input_ids: list[list[int]], start_patterns: List[str]):
+        # 为了 1. data_collator 里面 mask 无关位置的labels方便一点
+        #     2. 可以方便data_collator里计算一下前多少tokens不用送LMHead
+
+        in_lens = [len(input_id) for input_id in input_ids]
+
+        ranges = []
+        batch_size = len(in_lens)
+        for i in range(batch_size):
+            # find the start pattern from the end
+            current_input_ids = input_ids[i]
+            current_in_len = in_lens[i]
+            current_start_pattern = start_patterns[i]
+            if current_start_pattern is None:
+                ranges.append(None)
+                continue
+            current_start_pattern = self.tokenizer.encode(current_start_pattern, add_special_tokens=False)
+            _start_len = len(current_start_pattern)
+            start_index = None
+            for idx in range(current_in_len, -1, -1):
+                if current_input_ids[idx : idx + _start_len] == current_start_pattern:
+                    start_index = idx
+                    break
+            if start_index is None:
+                raise ValueError(
+                    f"start pattern [{self.tokenizer.decode(current_start_pattern)}] not found in input_ids:\n {self.tokenizer.decode(input_ids[i])}"
+                )
+            result = (start_index - 1, start_index + _start_len)
+
+            ranges.append(result)
+
+        return ranges
