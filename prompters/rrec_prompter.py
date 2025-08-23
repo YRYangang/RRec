@@ -344,7 +344,7 @@ class UserPrompter(AbstractPrompter):
 
         return result
 
-    def find_final_start_end(self, input_ids: list[list[int]], start_patterns: List[str]):
+    def find_final_start_end(self, input_ids: list[list[int]], start_patterns: list[str]):
         # 为了 1. data_collator 里面 mask 无关位置的labels方便一点
         #     2. 可以方便data_collator里计算一下前多少tokens不用送LMHead
 

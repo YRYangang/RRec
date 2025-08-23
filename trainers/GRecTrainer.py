@@ -559,6 +559,18 @@ class GenRecTrainer(Trainer):
                  ignore_keys: Optional[List[str]] = None,
                  metric_key_prefix: str = "eval",
                  ) -> Dict[str, float]:
+        """
+        During training, when this function is called, the eval_dataset is always None,
+        But after override (see source code of Trainer.evaluate()), 
+        the eval_dataset will be `self.eval_dataset`, which is a dict, 
+        i.e., {'test':a dataset, 'val':a dataset}, and this method will be called twice,
+        once for `test` and once for `val`.
+
+        What we do here is to generate the reasoning for both test and val datasets on the initial call.
+        And skip this process in the after-override calls.
+
+        So currently, do not manually call this function with eval_dataset setting to something else.
+        """
         if eval_dataset is None:
             eval_model = self.get_model_for_eval()
             self._generate_item_embeddings(eval_model)
@@ -580,8 +592,7 @@ class GenRecTrainer(Trainer):
                     self.eval_dataset[_set_name] = self.user_prompter.convert_dataset(
                         dset=self.eval_dataset[_set_name])
 
-                # calculate profile avg length
-                
+                    # calculate reasoning avg length
                     _len = [len(x['user_input_ids']) for x in self.eval_dataset[_set_name]]
                     self.store_metrics({'output_length': sum(_len) / len(_len)},
                                     metric_key_prefix=f"{metric_key_prefix}_{_set_name}")
