@@ -49,10 +49,17 @@ def train(
         resume_from_checkpoint: bool = False,
         window_size: int = 20,
         gather_negs_across_processes=True,
-        max_new_tokens=300,
-        group_size=4,
+        
         lr_scheduler_type='constant',
         use_vllm=True,
+
+
+        max_new_tokens=300,
+        group_size=4,
+        gen_top_k=200,
+        gen_temperature=2.,
+        gen_top_p=1.0,
+
         **kwargs,
 ):
     trainer_extra_kwargs = dict()
@@ -112,9 +119,9 @@ def train(
     gen_config = GenerationConfig.from_pretrained(model_name)
     gen_config.max_new_tokens = max_new_tokens
     gen_config.num_return_sequences = group_size
-    gen_config.top_k = 200
-    gen_config.top_p = 1.0
-    gen_config.temperature = 1.5
+    gen_config.top_k = gen_top_k
+    gen_config.top_p = gen_top_p
+    gen_config.temperature = gen_temperature
 
     ################################################################
 
@@ -166,7 +173,7 @@ def train(
         save_strategy="steps",
         save_steps=eval_steps,
         save_only_model=False,
-        save_total_limit=10,
+        save_total_limit=5,
         load_best_model_at_end=True,
 
         eval_strategy="steps",
