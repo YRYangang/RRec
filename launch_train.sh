@@ -27,6 +27,9 @@ accelerate launch --num_processes=$NUM_PROCESSES --config_file=accelerates/deeps
                 --seed=42 \
                 --num_train_epochs=3 \
                 --run_name='run_name' \
-                --group_size=4
+                --group_size=4 \
+                --trainer_relabel_topk=2 \
+                --gen_temperature=2.0 \
+                --gen_top_k=50
 
 
