@@ -1,5 +1,8 @@
-# $\text{R}^2\text{ec}$: Towards Large Recommender Models with Reasoning
+# R$^2$ec: Towards Large Recommender Models with Reasoning
 
+<p align="center">
+  <strong style="font-size:22pt">🔥 Our paper has been accepted to NeurIPS 2025! 🔥</strong>
+</p>
 
 
 ## 1. Preparations
