@@ -1,9 +1,10 @@
 # R$^2$ec: Towards Large Recommender Models with Reasoning
 
-<p align="center">
-  <strong style="font-size:22pt">🔥 Our paper has been accepted to NeurIPS 2025! 🔥</strong>
-</p>
 
+<strong style="font-size:22pt">🔥 Our paper has been accepted to NeurIPS 2025! </strong>
+
+- 📄 Paper on [Arxiv](https://arxiv.org/abs/2505.16994)
+- 💾 Checkpoints from [Hugging Face Hub](http://huggingface.co/papers/2505.16994)
 
 ## 1. Preparations
 
