@@ -1,4 +1,4 @@
-# R$^2$ec: Towards Large Recommender Models with Reasoning
+# R²ec: Towards Large Recommender Models with Reasoning
 
 
 <strong style="font-size:22pt">🔥 Our paper has been accepted to NeurIPS 2025! </strong>
@@ -105,7 +105,7 @@ Please cite the paper if you use Recformer in your work:
 
 ```bibtex
 @misc{you2025r2ec,
-    title={$\text{R}^2\text{ec}$: Towards Large Recommender Models with Reasoning},
+    title={R$^2$ec: Towards Large Recommender Models with Reasoning},
     author={Runyang You and Yongqi Li and Xinyu Lin and Xin Zhang and Wenjie Wang and Wenjie Li and Liqiang Nie},
     year={2025},
     eprint={2505.16994},
